@@ -254,6 +254,12 @@
     font-family: var(--mono);
   }
 
+  @keyframes bulb-glow {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.65; }
+  }
+  .probe-on { animation: bulb-glow 1.1s ease-in-out infinite; }
+
   scrollbar-width: thin;
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1061,10 +1067,69 @@ function pinLabel(x,y,content,anchor='start') {
   return `<text x="${x}" y="${y}" font-family="'Space Mono',monospace" font-size="10" fill="#4a5170" text-anchor="${anchor}" dominant-baseline="central">${content}</text>`;
 }
 
+// ── Probe bulb ────────────────────────────────────────────────────────────────
+// Draws a small LED-style probe bulb at (cx,cy).
+// val=1 → glowing green, val=0 → dim red, val='X' → amber warning
+function probe(cx, cy, val, label='') {
+  const isOn  = val === 1;
+  const isX   = val === 'X';
+  const r = 9;                                       // bulb glass radius
+  const stemH = 11;                                  // wire stem below bulb
+
+  // Colours
+  const glassOn  = '#2ecc8a';
+  const glassOff = '#2a1820';
+  const glassX   = '#f5a623';
+  const strokeOn  = '#2ecc8a';
+  const strokeOff = '#6b2232';
+  const strokeX   = '#f5a623';
+  const hazeOn   = 'rgba(46,204,138,0.28)';
+  const hazeX    = 'rgba(245,166,35,0.28)';
+
+  const glass  = isX ? glassX   : isOn ? glassOn   : glassOff;
+  const stroke = isX ? strokeX  : isOn ? strokeOn  : strokeOff;
+  const haze   = isX ? hazeX    : isOn ? hazeOn    : 'none';
+  const animCls= (isOn || isX)  ? 'class="probe-on"' : '';
+
+  // Filament lines inside the bulb (visible only when ON)
+  const filColor = isOn ? 'rgba(255,255,255,0.55)' : isX ? 'rgba(255,200,80,0.4)' : 'rgba(255,255,255,0.07)';
+
+  // Stem (base pin of the bulb)
+  const stemTop = cy + r;
+  const stemBot = cy + r + stemH;
+  // Base cap
+  const capW = 8, capH = 5;
+
+  const labelTxt = label
+    ? `<text x="${cx}" y="${stemBot + capH + 12}" text-anchor="middle"
+         font-family="'Space Mono',monospace" font-size="9"
+         fill="${isOn ? '#2ecc8a' : isX ? '#f5a623' : '#4a3040'}">${label}</text>`
+    : '';
+
+  return `
+  <g ${animCls}>
+    <!-- halo glow -->
+    <circle cx="${cx}" cy="${cy}" r="${r+7}" fill="${haze}" stroke="none"/>
+    <!-- glass bulb -->
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="${glass}" stroke="${stroke}" stroke-width="1.5" opacity="${isOn||isX?1:0.55}"/>
+    <!-- inner highlight -->
+    <circle cx="${cx-3}" cy="${cy-3}" r="3" fill="rgba(255,255,255,${isOn?0.3:isX?0.2:0.05})" stroke="none"/>
+    <!-- filament cross -->
+    <line x1="${cx-4}" y1="${cy}" x2="${cx+4}" y2="${cy}" stroke="${filColor}" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="${cx}" y1="${cy-4}" x2="${cx}" y2="${cy+4}" stroke="${filColor}" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- stem wire -->
+    <line x1="${cx}" y1="${stemTop}" x2="${cx}" y2="${stemBot}" stroke="${stroke}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+    <!-- base cap -->
+    <rect x="${cx - capW/2}" y="${stemBot}" width="${capW}" height="${capH}" rx="2"
+          fill="#1a1f2e" stroke="${stroke}" stroke-width="1" opacity="0.9"/>
+    ${labelTxt}
+  </g>`;
+}
+
 function buildSRCircuit() {
   const [S,R] = inputValues;
   const Q = outputValues.Q, QN = outputValues.QN;
-  return `<svg viewBox="0 0 480 200" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 480 240" width="100%" style="background:transparent">
     ${pinLabel(14,60,'S')} <line x1="30" y1="60" x2="80" y2="60" ${W(S)}/>
     ${pinLabel(14,140,'R')} <line x1="30" y1="140" x2="80" y2="140" ${W(R)}/>
 
@@ -1087,66 +1152,72 @@ function buildSRCircuit() {
     <line x1="80" y1="30" x2="80" y2="40" stroke="${wireColor(QN)}" stroke-width="2"/>
 
     <!-- Outputs -->
-    <line x1="200" y1="60" x2="290" y2="60" ${W(Q)}/>
-    <line x1="220" y1="140" x2="290" y2="140" ${W(QN)}/>
-    ${pinLabel(294,60,"Q")} ${pinLabel(294,140,"Q'")}
+    <line x1="200" y1="60" x2="340" y2="60" ${W(Q)}/>
+    <line x1="220" y1="140" x2="340" y2="140" ${W(QN)}/>
 
     <!-- Output nodes -->
     <circle cx="200" cy="60" r="4" fill="${wireColor(Q)}"/>
     <circle cx="220" cy="140" r="4" fill="${wireColor(QN)}"/>
+
+    <!-- Probe bulbs -->
+    ${probe(360, 48, Q, 'Q')}
+    ${probe(360, 128, QN, "Q'")}
   </svg>`;
 }
 
 function buildDFFCircuit() {
   const D = inputValues[0];
   const Q = outputValues.Q; const QN = outputValues.QN;
-  return `<svg viewBox="0 0 420 160" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 440 180" width="100%" style="background:transparent">
     ${pinLabel(14,60,'D')} <line x1="30" y1="60" x2="100" y2="60" ${W(D)}/>
     ${pinLabel(14,110,'CLK')} <line x1="30" y1="110" x2="100" y2="110" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
     <rect x="100" y="30" width="120" height="100" ${boxStyle()}/>
     ${txt(160,65,'D')} ${txt(160,85,'FF')}
-    <!-- CLK triangle -->
     <polygon points="100,103 114,110 100,117" fill="none" stroke="#f5a623" stroke-width="1.5"/>
-    <line x1="220" y1="60" x2="310" y2="60" ${W(Q)}/>
-    <line x1="220" y1="110" x2="310" y2="110" ${W(QN)}/>
-    ${pinLabel(314,60,'Q')} ${pinLabel(314,110,"Q'")}
-    ${txt(225,60,'','')} 
-    <!-- D label inside box -->
-    ${txt(115,60,'D','fill="#4a5170"')}
+    <line x1="220" y1="60" x2="330" y2="60" ${W(Q)}/>
+    <line x1="220" y1="110" x2="330" y2="110" ${W(QN)}/>
+    ${txt(113,60,'D','fill="#4a5170"')}
+    <!-- Probe bulbs -->
+    ${probe(350, 48, Q, 'Q')}
+    ${probe(350, 98, QN, "Q'")}
   </svg>`;
 }
 
 function buildJKCircuit() {
   const [J,K] = inputValues;
   const Q = outputValues.Q; const QN = outputValues.QN;
-  return `<svg viewBox="0 0 420 180" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 460 200" width="100%" style="background:transparent">
     ${pinLabel(14,55,'J')} <line x1="30" y1="55" x2="100" y2="55" ${W(J)}/>
     ${pinLabel(14,90,'CLK')} <line x1="30" y1="90" x2="100" y2="90" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
     ${pinLabel(14,125,'K')} <line x1="30" y1="125" x2="100" y2="125" ${W(K)}/>
     <rect x="100" y="30" width="120" height="120" ${boxStyle()}/>
     ${txt(160,90,'JK-FF')}
     <polygon points="100,83 114,90 100,97" fill="none" stroke="#f5a623" stroke-width="1.5"/>
-    <line x1="220" y1="65" x2="320" y2="65" ${W(Q)}/>
-    <line x1="220" y1="115" x2="320" y2="115" ${W(QN)}/>
-    ${pinLabel(324,65,'Q')} ${pinLabel(324,115,"Q'")}
+    <line x1="220" y1="65" x2="340" y2="65" ${W(Q)}/>
+    <line x1="220" y1="115" x2="340" y2="115" ${W(QN)}/>
     ${txt(113,55,'J','fill="#4a5170"')}
     ${txt(113,125,'K','fill="#4a5170"')}
+    <!-- Probe bulbs -->
+    ${probe(360, 53, Q, 'Q')}
+    ${probe(360, 103, QN, "Q'")}
   </svg>`;
 }
 
 function buildTFFCircuit() {
   const T = inputValues[0];
   const Q = outputValues.Q; const QN = outputValues.QN;
-  return `<svg viewBox="0 0 400 160" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 440 170" width="100%" style="background:transparent">
     ${pinLabel(14,60,'T')} <line x1="30" y1="60" x2="100" y2="60" ${W(T)}/>
     ${pinLabel(14,100,'CLK')} <line x1="30" y1="100" x2="100" y2="100" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
     <rect x="100" y="30" width="120" height="100" ${boxStyle()}/>
     ${txt(160,80,'T-FF')}
     <polygon points="100,93 114,100 100,107" fill="none" stroke="#f5a623" stroke-width="1.5"/>
-    <line x1="220" y1="65" x2="310" y2="65" ${W(Q)}/>
-    <line x1="220" y1="95" x2="310" y2="95" ${W(QN)}/>
-    ${pinLabel(314,65,'Q')} ${pinLabel(314,95,"Q'")}
+    <line x1="220" y1="65" x2="330" y2="65" ${W(Q)}/>
+    <line x1="220" y1="95" x2="330" y2="95" ${W(QN)}/>
     ${txt(113,60,'T','fill="#4a5170"')}
+    <!-- Probe bulbs -->
+    ${probe(350, 53, Q, 'Q')}
+    ${probe(350, 83, QN, "Q'")}
   </svg>`;
 }
 
@@ -1155,9 +1226,9 @@ function buildCounterCircuit(bits) {
   const vals = bits === 2
     ? [outputValues.Q0||0, outputValues.Q1||0]
     : [outputValues.Q0||0, outputValues.Q1||0, outputValues.Q2||0];
-  const W2 = 560;
+  const W2 = 600;
   const start = 30, gap = 160;
-  let svg = `<svg viewBox="0 0 ${W2} 160" width="100%" style="background:transparent">`;
+  let svg = `<svg viewBox="0 0 ${W2} 200" width="100%" style="background:transparent">`;
   svg += `${pinLabel(14,80,'CLK')} <line x1="30" y1="80" x2="${start+gap-10}" y2="80" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>`;
 
   ffs.forEach((ff,i) => {
@@ -1165,8 +1236,11 @@ function buildCounterCircuit(bits) {
     svg += `<rect x="${x}" y="40" width="110" height="80" ${boxStyle()}/>`;
     svg += txt(x+55,80,'T-FF');
     svg += `<polygon points="${x},73 ${x+14},80 ${x},87" fill="none" stroke="#f5a623" stroke-width="1.5"/>`;
-    svg += `<line x1="${x+110}" y1="65" x2="${x+gap}" y2="65" ${W(vals[i])}/>`;
-    svg += pinLabel(x+115,65,`Q${i}`);
+    // wire to next FF or to probe
+    const wireEnd = i < ffs.length-1 ? x+gap : x+145;
+    svg += `<line x1="${x+110}" y1="65" x2="${wireEnd}" y2="65" ${W(vals[i])}/>`;
+    // probe on each output
+    svg += probe(x+140, 48, vals[i], `Q${i}`);
     if (i < ffs.length-1) {
       svg += `<line x1="${x+160}" y1="65" x2="${x+160}" y2="110" ${W(vals[i])}/>`;
       svg += `<line x1="${x+160}" y1="110" x2="${x+gap}" y2="110" ${W(vals[i])}/>`;
@@ -1181,22 +1255,23 @@ function buildGateCircuit(type) {
   const A = inputValues[0], B = inputValues[1];
   const Y = outputValues.Y;
   const bubbled = type === 'NAND' || type === 'NOR';
-  return `<svg viewBox="0 0 380 140" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 420 160" width="100%" style="background:transparent">
     ${pinLabel(14,50,'A')} <line x1="30" y1="50" x2="110" y2="50" ${W(A)}/>
     ${pinLabel(14,90,'B')} <line x1="30" y1="90" x2="110" y2="90" ${W(B)}/>
     <rect x="110" y="30" width="100" height="80" ${boxStyle()}/>
     ${txt(160,70,type)}
-    <line x1="210" y1="70" x2="${bubbled?230:280}" y2="70" ${W(Y)}/>
+    <line x1="210" y1="70" x2="${bubbled?230:310}" y2="70" ${W(Y)}/>
     ${bubbled ? `<circle cx="236" cy="70" r="6" fill="#1e2330" stroke="${wireColor(Y)}" stroke-width="2"/>
-    <line x1="242" y1="70" x2="280" y2="70" ${W(Y)}/>` : ''}
-    ${pinLabel(284,70,'Y')}
+    <line x1="242" y1="70" x2="310" y2="70" ${W(Y)}/>` : ''}
+    <!-- Probe bulb -->
+    ${probe(328, 56, Y, 'Y')}
   </svg>`;
 }
 
 function buildHalfAdderCircuit() {
   const A = inputValues[0], B = inputValues[1];
   const Sum = outputValues.Sum, Cout = outputValues.Cout;
-  return `<svg viewBox="0 0 480 200" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 520 220" width="100%" style="background:transparent">
     ${pinLabel(14,60,'A')} <line x1="30" y1="60" x2="100" y2="60" ${W(A)}/>
     ${pinLabel(14,140,'B')} <line x1="30" y1="140" x2="100" y2="140" ${W(B)}/>
 
@@ -1216,16 +1291,19 @@ function buildHalfAdderCircuit() {
     <circle cx="70" cy="140" r="4" fill="${wireColor(B)}"/>
     <line x1="70" y1="140" x2="100" y2="130" ${W(B)}/>
 
-    <line x1="190" y1="60" x2="300" y2="60" ${W(Sum)}/>
-    <line x1="190" y1="140" x2="300" y2="140" ${W(Cout)}/>
-    ${pinLabel(304,60,'Sum')} ${pinLabel(304,140,'Cout')}
+    <line x1="190" y1="60" x2="360" y2="60" ${W(Sum)}/>
+    <line x1="190" y1="140" x2="360" y2="140" ${W(Cout)}/>
+
+    <!-- Probe bulbs -->
+    ${probe(378, 46, Sum, 'Sum')}
+    ${probe(378, 126, Cout, 'Cout')}
   </svg>`;
 }
 
 function buildFullAdderCircuit() {
   const [A,B,Cin] = inputValues;
   const Sum = outputValues.Sum, Cout = outputValues.Cout;
-  return `<svg viewBox="0 0 520 220" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 580 240" width="100%" style="background:transparent">
     ${pinLabel(8,50,'A')} <line x1="24" y1="50" x2="90" y2="50" ${W(A)}/>
     ${pinLabel(8,110,'B')} <line x1="24" y1="110" x2="90" y2="110" ${W(B)}/>
     ${pinLabel(8,170,'Cin')} <line x1="24" y1="170" x2="90" y2="170" ${W(Cin)}/>
@@ -1237,11 +1315,9 @@ function buildFullAdderCircuit() {
     <rect x="90" y="130" width="80" height="40" ${boxStyle()}/>
     ${txt(130,150,'AND')}
 
-    <!-- Wire A,B to XOR1 & AND1 -->
     <line x1="50" y1="50" x2="50" y2="130" ${W(A)}/><line x1="50" y1="130" x2="90" y2="140" ${W(A)}/><circle cx="50" cy="50" r="3" fill="${wireColor(A)}"/>
     <line x1="60" y1="110" x2="60" y2="145" ${W(B)}/><line x1="60" y1="145" x2="90" y2="150" ${W(B)}/><circle cx="60" cy="110" r="3" fill="${wireColor(B)}"/>
 
-    <!-- XOR1 out -->
     <line x1="170" y1="50" x2="220" y2="50" ${W(A^B)}/>
     <!-- XOR2 -->
     <rect x="220" y="30" width="80" height="40" ${boxStyle()}/>
@@ -1262,16 +1338,19 @@ function buildFullAdderCircuit() {
     <line x1="330" y1="150" x2="340" y2="130" ${W((A&B))}/>
     <line x1="300" y1="160" x2="340" y2="150" ${W((A&B)^(Cin&(A^B)))}/>
 
-    <line x1="300" y1="50" x2="440" y2="50" ${W(Sum)}/>
-    <line x1="420" y1="140" x2="440" y2="140" ${W(Cout)}/>
-    ${pinLabel(444,50,'Sum')} ${pinLabel(444,140,'Cout')}
+    <line x1="300" y1="50" x2="470" y2="50" ${W(Sum)}/>
+    <line x1="420" y1="140" x2="470" y2="140" ${W(Cout)}/>
+
+    <!-- Probe bulbs -->
+    ${probe(488, 36, Sum, 'Sum')}
+    ${probe(488, 126, Cout, 'Cout')}
   </svg>`;
 }
 
 function buildMuxCircuit() {
   const [D0,D1,Sel] = inputValues;
   const Y = outputValues.Y;
-  return `<svg viewBox="0 0 440 200" width="100%" style="background:transparent">
+  return `<svg viewBox="0 0 480 220" width="100%" style="background:transparent">
     ${pinLabel(14,50,'D0')} <line x1="36" y1="50" x2="120" y2="50" ${W(D0)}/>
     ${pinLabel(14,110,'D1')} <line x1="36" y1="110" x2="120" y2="110" ${W(D1)}/>
     ${pinLabel(14,170,'Sel')} <line x1="36" y1="170" x2="200" y2="170" ${W(Sel)}/>
@@ -1280,8 +1359,9 @@ function buildMuxCircuit() {
     <polygon points="120,20 120,180 220,150 220,50" fill="#1e2330" stroke="#3a4570" stroke-width="1.5"/>
     ${txt(170,100,'MUX')}
     ${txt(130,50,'0','fill="#4a5170"')} ${txt(130,110,'1','fill="#4a5170"')}
-    <line x1="220" y1="100" x2="330" y2="100" ${W(Y)}/>
-    ${pinLabel(334,100,'Y')}
+    <line x1="220" y1="100" x2="360" y2="100" ${W(Y)}/>
+    <!-- Probe bulb -->
+    ${probe(378, 86, Y, 'Y')}
   </svg>`;
 }
 
