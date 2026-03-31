@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logic Lab — Digital Circuit Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface2: #1e2330;
+    --surface3: #252c3a;
+    --border: rgba(100,120,180,0.15);
+    --border2: rgba(100,120,180,0.28);
+    --accent: #4f8ef7;
+    --accent2: #7c5cf6;
+    --green: #2ecc8a;
+    --red: #f05e5e;
+    --amber: #f5a623;
+    --text: #e8ecf4;
+    --text2: #8a93a8;
+    --text3: #4a5170;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --glow: 0 0 12px rgba(79,142,247,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .logo span { color: var(--text2); }
+  header p { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+  /* Layout */
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 16px 12px;
+  }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 4px 10px;
+  }
+  .comp-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    margin-bottom: 4px;
+    transition: all .15s;
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  .comp-btn:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .comp-btn.active {
+    background: rgba(79,142,247,0.12);
+    border-color: rgba(79,142,247,0.35);
+    color: var(--accent);
+  }
+  .comp-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    background: var(--surface3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 9px;
+    color: var(--text3);
+    flex-shrink: 0;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .comp-btn.active .comp-icon { background: rgba(79,142,247,0.2); color: var(--accent); }
+  .comp-info { flex: 1; min-width: 0; }
+  .comp-name { font-size: 13px; font-weight: 500; }
+  .comp-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+  }
+  .panel-header h2 { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); }
+  .panel-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-blue { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dot-purple { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+  /* Input Controls */
+  .input-section { padding: 18px; }
+  .input-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-label { font-size: 11px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; }
+  .bit-btn {
+    width: 52px; height: 52px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--surface3);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text3);
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bit-btn.on {
+    background: rgba(46,204,138,0.15);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 12px rgba(46,204,138,0.2);
+  }
+  .bit-btn:hover { border-color: var(--border2); transform: scale(1.05); }
+  .separator { width: 1px; height: 52px; background: var(--border); margin: 22px 4px 0; }
+  .clock-info {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .clock-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+  /* Output display */
+  .output-row {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+  }
+  .output-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .output-chip .pin-name { color: var(--text3); font-size: 11px; }
+  .output-chip .pin-val { font-size: 18px; font-weight: 700; }
+  .pin-val.v1 { color: var(--green); text-shadow: 0 0 8px rgba(46,204,138,.4); }
+  .pin-val.v0 { color: var(--red); }
+  .state-badge {
+    background: rgba(79,142,247,0.15);
+    border: 1px solid rgba(79,142,247,0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+
+  /* Circuit diagram */
+  .circuit-area { padding: 18px; overflow-x: auto; }
+  #circuit-svg { display: block; }
+
+  /* Truth table */
+  .table-wrap { padding: 18px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  th {
+    background: var(--surface3);
+    padding: 8px 14px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 7px 14px; text-align: center; border-bottom: 1px solid var(--border); color: var(--text2); }
+  tr.active-row { background: rgba(79,142,247,0.08); }
+  tr.active-row td { color: var(--text); font-weight: 700; }
+  .cell-1 { color: var(--green) !important; }
+  .cell-0 { color: var(--red) !important; }
+  td:first-child { color: var(--text3); }
+
+  /* Waveform */
+  .waveform-area { padding: 18px; }
+  #waveform-svg { display: block; width: 100%; }
+
+  /* Description */
+  .desc-area { padding: 14px 18px; background: var(--surface2); border-top: 1px solid var(--border); }
+  .desc-area p { font-size: 12px; color: var(--text2); line-height: 1.7; }
+  .desc-area strong { color: var(--accent); }
+
+  /* Component title */
+  .comp-title-row {
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-title-name { font-size: 20px; font-weight: 600; color: var(--text); }
+  .comp-title-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .comp-title-badge {
+    margin-left: auto;
+    background: rgba(124,92,246,0.15);
+    border: 1px solid rgba(124,92,246,0.35);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--accent2);
+    font-family: var(--mono);
+  }
+
+  scrollbar-width: thin;
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px; gap: 12px; color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; opacity: .5; }
+  .empty-state p { font-size: 13px; text-align: center; max-width: 260px; line-height: 1.6; }
+
+  @media (max-width: 700px) {
+    .sidebar { width: 64px; }
+    .comp-info, .comp-sub { display: none; }
+    .comp-btn { padding: 8px; justify-content: center; }
+    .comp-icon { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LOGIC<span>LAB</span></div>
+  <p>Digital Circuit Simulator · v1.0</p>
+</header>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-title">Components</div>
+
+    <button class="comp-btn" onclick="selectComp('sr_latch')" id="btn-sr_latch">
+      <div class="comp-icon">SR</div>
+      <div class="comp-info">
+        <div class="comp-name">SR Latch</div>
+        <div class="comp-sub">Set-Reset</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('d_ff')" id="btn-d_ff">
+      <div class="comp-icon">D</div>
+      <div class="comp-info">
+        <div class="comp-name">D Flip-Flop</div>
+        <div class="comp-sub">Data latch</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('jk_ff')" id="btn-jk_ff">
+      <div class="comp-icon">JK</div>
+      <div class="comp-info">
+        <div class="comp-name">JK Flip-Flop</div>
+        <div class="comp-sub">Toggle / set</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('t_ff')" id="btn-t_ff">
+      <div class="comp-icon">T</div>
+      <div class="comp-info">
+        <div class="comp-name">T Flip-Flop</div>
+        <div class="comp-sub">Toggle</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('counter_2bit')" id="btn-counter_2bit">
+      <div class="comp-icon">2B</div>
+      <div class="comp-info">
+        <div class="comp-name">2-Bit Counter</div>
+        <div class="comp-sub">0–3 ripple</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('counter_3bit')" id="btn-counter_3bit">
+      <div class="comp-icon">3B</div>
+      <div class="comp-info">
+        <div class="comp-name">3-Bit Counter</div>
+        <div class="comp-sub">0–7 ripple</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('and_gate')" id="btn-and_gate">
+      <div class="comp-icon">AND</div>
+      <div class="comp-info">
+        <div class="comp-name">AND Gate</div>
+        <div class="comp-sub">A · B</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('or_gate')" id="btn-or_gate">
+      <div class="comp-icon">OR</div>
+      <div class="comp-info">
+        <div class="comp-name">OR Gate</div>
+        <div class="comp-sub">A + B</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('xor_gate')" id="btn-xor_gate">
+      <div class="comp-icon">XOR</div>
+      <div class="comp-info">
+        <div class="comp-name">XOR Gate</div>
+        <div class="comp-sub">A ⊕ B</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('nand_gate')" id="btn-nand_gate">
+      <div class="comp-icon">NAND</div>
+      <div class="comp-info">
+        <div class="comp-name">NAND Gate</div>
+        <div class="comp-sub">NOT(A·B)</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('nor_gate')" id="btn-nor_gate">
+      <div class="comp-icon">NOR</div>
+      <div class="comp-info">
+        <div class="comp-name">NOR Gate</div>
+        <div class="comp-sub">NOT(A+B)</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('half_adder')" id="btn-half_adder">
+      <div class="comp-icon">HA</div>
+      <div class="comp-info">
+        <div class="comp-name">Half Adder</div>
+        <div class="comp-sub">Sum + Carry</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('full_adder')" id="btn-full_adder">
+      <div class="comp-icon">FA</div>
+      <div class="comp-info">
+        <div class="comp-name">Full Adder</div>
+        <div class="comp-sub">A+B+Cin</div>
+      </div>
+    </button>
+
+    <button class="comp-btn" onclick="selectComp('mux_2to1')" id="btn-mux_2to1">
+      <div class="comp-icon">MUX</div>
+      <div class="comp-info">
+        <div class="comp-name">2-to-1 MUX</div>
+        <div class="comp-sub">Multiplexer</div>
+      </div>
+    </button>
+  </div>
+
+  <div class="main" id="main-content">
+    <div class="panel">
+      <div class="empty-state">
+        <div class="empty-icon">⚡</div>
+        <p>Select a component from the sidebar to begin simulating.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Component Definitions ───────────────────────────────────────────────────
+
+const COMPONENTS = {
+
+  sr_latch: {
+    name: 'SR Latch',
+    subtitle: 'Set-Reset Latch (NOR-based)',
+    type: 'sequential',
+    inputs: ['S', 'R'],
+    outputs: ['Q', 'Q\''],
+    description: 'The SR latch stores one bit. S=1 <strong>sets</strong> Q=1. R=1 <strong>resets</strong> Q=0. Both S=R=1 is <strong>forbidden</strong> (invalid state). Built from cross-coupled NOR gates.',
+    truthTable: [
+      { inputs: [0,0], outputs: ['Q','Q\''], note: 'Hold (no change)' },
+      { inputs: [0,1], outputs: [0,1], note: 'Reset' },
+      { inputs: [1,0], outputs: [1,0], note: 'Set' },
+      { inputs: [1,1], outputs: ['X','X'], note: '⚠ Forbidden' },
+    ],
+    compute(inputs, state) {
+      const [S,R] = inputs;
+      if (S===1 && R===1) return { Q: 'X', QN: 'X', state: state, invalid: true };
+      if (S===1) return { Q:1, QN:0, state:1 };
+      if (R===1) return { Q:0, QN:1, state:0 };
+      return { Q: state, QN: 1-state, state: state };
+    },
+    initState: 0,
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0],
+    ]
+  },
+
+  d_ff: {
+    name: 'D Flip-Flop',
+    subtitle: 'Data / Delay Flip-Flop',
+    type: 'sequential',
+    inputs: ['D'],
+    outputs: ['Q', 'Q\''],
+    description: 'Captures the value of <strong>D</strong> on the rising edge of the clock. Q follows D but only updates on CLK↑. Eliminates the ambiguous state of the SR latch.',
+    truthTable: [
+      { inputs: [0], outputs: [0,1], note: 'D=0 captured' },
+      { inputs: [1], outputs: [1,0], note: 'D=1 captured' },
+    ],
+    compute(inputs, state) {
+      return { Q: inputs[0], QN: 1-inputs[0], state: inputs[0] };
+    },
+    initState: 0,
+    waveInputs: [
+      [0,0,1,1,0,1,1,0,0,1,1,1,0,0,1,0],
+    ]
+  },
+
+  jk_ff: {
+    name: 'JK Flip-Flop',
+    subtitle: 'Universal Flip-Flop',
+    type: 'sequential',
+    inputs: ['J', 'K'],
+    outputs: ['Q', 'Q\''],
+    description: 'Extends the SR latch. J=<strong>Set</strong>, K=<strong>Reset</strong>. J=K=1 <strong>toggles</strong> Q — this eliminates the forbidden state. Most versatile flip-flop.',
+    truthTable: [
+      { inputs: [0,0], outputs: ['Q','Q\''], note: 'Hold' },
+      { inputs: [0,1], outputs: [0,1], note: 'Reset' },
+      { inputs: [1,0], outputs: [1,0], note: 'Set' },
+      { inputs: [1,1], outputs: ['Q\'','Q'], note: 'Toggle' },
+    ],
+    compute(inputs, state) {
+      const [J,K] = inputs;
+      if (J===0 && K===0) return { Q: state, QN: 1-state, state };
+      if (J===0 && K===1) return { Q: 0, QN: 1, state: 0 };
+      if (J===1 && K===0) return { Q: 1, QN: 0, state: 1 };
+      return { Q: 1-state, QN: state, state: 1-state };
+    },
+    initState: 0,
+    waveInputs: [
+      [0,0,1,1,1,1,0,0,0,1,1,1,0,0,1,0],
+      [0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,1],
+    ]
+  },
+
+  t_ff: {
+    name: 'T Flip-Flop',
+    subtitle: 'Toggle Flip-Flop',
+    type: 'sequential',
+    inputs: ['T'],
+    outputs: ['Q', 'Q\''],
+    description: 'When T=1, Q <strong>toggles</strong> on every clock edge. When T=0, Q <strong>holds</strong>. Used as frequency dividers in counters.',
+    truthTable: [
+      { inputs: [0], outputs: ['Q','Q\''], note: 'Hold' },
+      { inputs: [1], outputs: ['Q\'','Q'], note: 'Toggle' },
+    ],
+    compute(inputs, state) {
+      if (inputs[0]===1) return { Q: 1-state, QN: state, state: 1-state };
+      return { Q: state, QN: 1-state, state };
+    },
+    initState: 0,
+    waveInputs: [
+      [1,1,0,0,1,1,0,1,1,0,1,1,1,0,0,1],
+    ]
+  },
+
+  counter_2bit: {
+    name: '2-Bit Binary Counter',
+    subtitle: 'Ripple counter Q1 Q0 (0–3)',
+    type: 'counter',
+    inputs: [],
+    outputs: ['Q1', 'Q0'],
+    description: 'A 2-bit synchronous counter that cycles <strong>00→01→10→11→00</strong>. Click CLK to advance. Each clock edge increments the count. Built from two T flip-flops.',
+    truthTable: [
+      { inputs: [0], outputs: [0,0], note: 'Count 0' },
+      { inputs: [1], outputs: [0,1], note: 'Count 1' },
+      { inputs: [2], outputs: [1,0], note: 'Count 2' },
+      { inputs: [3], outputs: [1,1], note: 'Count 3' },
+    ],
+    counterBits: 2,
+    compute(inputs, state) {
+      const next = (state + 1) % 4;
+      return { Q1: (next>>1)&1, Q0: next&1, state: next, display: next };
+    },
+    initState: 0,
+    waveInputs: []
+  },
+
+  counter_3bit: {
+    name: '3-Bit Binary Counter',
+    subtitle: 'Ripple counter Q2 Q1 Q0 (0–7)',
+    type: 'counter',
+    inputs: [],
+    outputs: ['Q2', 'Q1', 'Q0'],
+    description: 'A 3-bit counter cycling <strong>000→001→…→111→000</strong>. Built from three T flip-flops in series, each dividing the clock by 2.',
+    truthTable: [
+      { inputs:[0], outputs:[0,0,0], note:'Count 0'},
+      { inputs:[1], outputs:[0,0,1], note:'Count 1'},
+      { inputs:[2], outputs:[0,1,0], note:'Count 2'},
+      { inputs:[3], outputs:[0,1,1], note:'Count 3'},
+      { inputs:[4], outputs:[1,0,0], note:'Count 4'},
+      { inputs:[5], outputs:[1,0,1], note:'Count 5'},
+      { inputs:[6], outputs:[1,1,0], note:'Count 6'},
+      { inputs:[7], outputs:[1,1,1], note:'Count 7'},
+    ],
+    counterBits: 3,
+    compute(inputs, state) {
+      const next = (state + 1) % 8;
+      return { Q2: (next>>2)&1, Q1: (next>>1)&1, Q0: next&1, state: next };
+    },
+    initState: 0,
+    waveInputs: []
+  },
+
+  and_gate: {
+    name: 'AND Gate',
+    subtitle: 'A · B',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Y'],
+    description: 'Output is <strong>1 only when all inputs are 1</strong>. Symbol is a flat-backed D shape.',
+    truthTable: [
+      { inputs:[0,0], outputs:[0] },
+      { inputs:[0,1], outputs:[0] },
+      { inputs:[1,0], outputs:[0] },
+      { inputs:[1,1], outputs:[1] },
+    ],
+    compute(inputs) { return { Y: inputs[0] & inputs[1] }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  or_gate: {
+    name: 'OR Gate',
+    subtitle: 'A + B',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Y'],
+    description: 'Output is <strong>1 when at least one input is 1</strong>. Symbol has a curved back and pointed output.',
+    truthTable: [
+      { inputs:[0,0], outputs:[0] },
+      { inputs:[0,1], outputs:[1] },
+      { inputs:[1,0], outputs:[1] },
+      { inputs:[1,1], outputs:[1] },
+    ],
+    compute(inputs) { return { Y: inputs[0] | inputs[1] }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  xor_gate: {
+    name: 'XOR Gate',
+    subtitle: 'A ⊕ B',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Y'],
+    description: 'Output is <strong>1 when inputs differ</strong>. Same as modulo-2 addition. Symbol like OR but with an extra curved line at the input.',
+    truthTable: [
+      { inputs:[0,0], outputs:[0] },
+      { inputs:[0,1], outputs:[1] },
+      { inputs:[1,0], outputs:[1] },
+      { inputs:[1,1], outputs:[0] },
+    ],
+    compute(inputs) { return { Y: inputs[0] ^ inputs[1] }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  nand_gate: {
+    name: 'NAND Gate',
+    subtitle: 'NOT(A · B)',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Y'],
+    description: '<strong>Inverted AND</strong>. Universal gate — any logic function can be built from NAND gates alone. Output is 0 only when all inputs are 1.',
+    truthTable: [
+      { inputs:[0,0], outputs:[1] },
+      { inputs:[0,1], outputs:[1] },
+      { inputs:[1,0], outputs:[1] },
+      { inputs:[1,1], outputs:[0] },
+    ],
+    compute(inputs) { return { Y: ~(inputs[0] & inputs[1]) & 1 }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  nor_gate: {
+    name: 'NOR Gate',
+    subtitle: 'NOT(A + B)',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Y'],
+    description: '<strong>Inverted OR</strong>. Also a universal gate. Output is 1 only when all inputs are 0. Used as the building block of SR latches.',
+    truthTable: [
+      { inputs:[0,0], outputs:[1] },
+      { inputs:[0,1], outputs:[0] },
+      { inputs:[1,0], outputs:[0] },
+      { inputs:[1,1], outputs:[0] },
+    ],
+    compute(inputs) { return { Y: ~(inputs[0] | inputs[1]) & 1 }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  half_adder: {
+    name: 'Half Adder',
+    subtitle: 'A + B → Sum, Carry',
+    type: 'combinational',
+    inputs: ['A', 'B'],
+    outputs: ['Sum', 'Cout'],
+    description: 'Adds two single bits. <strong>Sum = A XOR B</strong>, <strong>Cout = A AND B</strong>. Cannot handle carry-in, hence "half". Two half adders make a full adder.',
+    truthTable: [
+      { inputs:[0,0], outputs:[0,0], note:'0+0=0' },
+      { inputs:[0,1], outputs:[1,0], note:'0+1=1' },
+      { inputs:[1,0], outputs:[1,0], note:'1+0=1' },
+      { inputs:[1,1], outputs:[0,1], note:'1+1=10' },
+    ],
+    compute(inputs) { return { Sum: inputs[0] ^ inputs[1], Cout: inputs[0] & inputs[1] }; },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  full_adder: {
+    name: 'Full Adder',
+    subtitle: 'A + B + Cin → Sum, Cout',
+    type: 'combinational',
+    inputs: ['A', 'B', 'Cin'],
+    outputs: ['Sum', 'Cout'],
+    description: 'Adds three bits including carry-in. <strong>Sum = A ⊕ B ⊕ Cin</strong>, <strong>Cout</strong> is 1 when two or more inputs are 1. Used in multi-bit adders by chaining.',
+    truthTable: [
+      { inputs:[0,0,0], outputs:[0,0], note:'0' },
+      { inputs:[0,0,1], outputs:[1,0], note:'1' },
+      { inputs:[0,1,0], outputs:[1,0], note:'1' },
+      { inputs:[0,1,1], outputs:[0,1], note:'2' },
+      { inputs:[1,0,0], outputs:[1,0], note:'1' },
+      { inputs:[1,0,1], outputs:[0,1], note:'2' },
+      { inputs:[1,1,0], outputs:[0,1], note:'2' },
+      { inputs:[1,1,1], outputs:[1,1], note:'3' },
+    ],
+    compute(inputs) {
+      const [A,B,Cin] = inputs;
+      const sum = A ^ B ^ Cin;
+      const cout = (A&B)|(B&Cin)|(A&Cin);
+      return { Sum: sum, Cout: cout };
+    },
+    waveInputs: [
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1],
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    ]
+  },
+
+  mux_2to1: {
+    name: '2-to-1 Multiplexer',
+    subtitle: 'Select one of two inputs',
+    type: 'combinational',
+    inputs: ['D0', 'D1', 'Sel'],
+    outputs: ['Y'],
+    description: 'Selects between two data inputs based on <strong>Sel</strong>. When Sel=0, Y=D0. When Sel=1, Y=D1. Fundamental building block of data routing.',
+    truthTable: [
+      { inputs:[0,0,0], outputs:[0], note:'Sel=0→D0' },
+      { inputs:[0,1,0], outputs:[0], note:'Sel=0→D0' },
+      { inputs:[1,0,0], outputs:[1], note:'Sel=0→D0' },
+      { inputs:[1,1,0], outputs:[1], note:'Sel=0→D0' },
+      { inputs:[0,0,1], outputs:[0], note:'Sel=1→D1' },
+      { inputs:[0,1,1], outputs:[1], note:'Sel=1→D1' },
+      { inputs:[1,0,1], outputs:[0], note:'Sel=1→D1' },
+      { inputs:[1,1,1], outputs:[1], note:'Sel=1→D1' },
+    ],
+    compute(inputs) { return { Y: inputs[2]===0 ? inputs[0] : inputs[1] }; },
+    waveInputs: [
+      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+      [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+      [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+    ]
+  },
+
+};
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let currentComp = null;
+let inputValues = [];
+let compState = 0;
+let outputValues = {};
+let history = [];
+const MAX_HISTORY = 16;
+
+function selectComp(id) {
+  document.querySelectorAll('.comp-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+id).classList.add('active');
+  currentComp = id;
+  const def = COMPONENTS[id];
+  compState = def.initState !== undefined ? def.initState : 0;
+  inputValues = def.inputs.map(() => 0);
+  history = [];
+  simulate();
+  renderAll();
+}
+
+function simulate() {
+  const def = COMPONENTS[currentComp];
+  if (!def) return;
+  const result = def.compute(inputValues, compState);
+  if (result.state !== undefined) compState = result.state;
+  const out = {...result};
+  delete out.state;
+  delete out.invalid;
+  outputValues = out;
+
+  const snap = { inputs: [...inputValues], outputs: {...out} };
+  history.push(snap);
+  if (history.length > MAX_HISTORY) history.shift();
+}
+
+function toggleInput(i) {
+  if (!currentComp) return;
+  inputValues[i] = 1 - inputValues[i];
+  simulate();
+  renderAll();
+}
+
+function clockTick() {
+  if (!currentComp) return;
+  simulate();
+  renderAll();
+}
+
+function renderAll() {
+  const def = COMPONENTS[currentComp];
+  if (!def) return;
+  document.getElementById('main-content').innerHTML = buildUI(def);
+}
+
+function buildUI(def) {
+  return `
+    <div class="panel">
+      <div class="comp-title-row">
+        <div>
+          <div class="comp-title-name">${def.name}</div>
+          <div class="comp-title-sub">${def.subtitle}</div>
+        </div>
+        <span class="comp-title-badge">${def.type}</span>
+      </div>
+
+      ${buildInputSection(def)}
+      ${buildOutputSection(def)}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="panel" style="grid-column:${def.type==='counter'?'1':needsFullWidth(def)?'1 / -1':'1'}">
+        <div class="panel-header"><div class="panel-dot dot-blue"></div><h2>Circuit Diagram</h2></div>
+        <div class="circuit-area">${buildCircuit(def)}</div>
+      </div>
+      <div class="panel" style="grid-column:${def.type==='counter'?'2':''}">
+        <div class="panel-header"><div class="panel-dot dot-amber"></div><h2>Truth Table</h2></div>
+        <div class="table-wrap">${buildTruthTable(def)}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-dot dot-purple"></div><h2>Waveform Diagram</h2></div>
+      <div class="waveform-area">${buildWaveform(def)}</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-dot dot-green"></div><h2>Description</h2></div>
+      <div class="desc-area"><p>${def.description}</p></div>
+    </div>
+  `;
+}
+
+function needsFullWidth(def) { return def.inputs.length >= 3; }
+
+// ─── Input Section ────────────────────────────────────────────────────────────
+function buildInputSection(def) {
+  if (def.type === 'counter') {
+    return `
+      <div class="input-section">
+        <div class="input-grid">
+          <div class="input-group">
+            <div class="input-label">Clock</div>
+            <button class="bit-btn" onclick="clockTick()" style="width:100px;font-size:12px;font-family:var(--mono);color:var(--amber);border-color:rgba(245,166,35,0.4);background:rgba(245,166,35,0.08)">CLK ↑</button>
+          </div>
+          <div class="clock-info"><div class="clock-dot"></div><span>Click CLK to advance the counter</span></div>
+          <div class="input-group" style="margin-left:auto;">
+            <div class="input-label">State</div>
+            <button class="bit-btn" onclick="compState=0;simulate();renderAll();" style="font-size:11px;color:var(--text3)">RST</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  const bits = def.inputs.map((name, i) => `
+    <div class="input-group">
+      <div class="input-label">${name}</div>
+      <button class="bit-btn ${inputValues[i]===1?'on':''}" onclick="toggleInput(${i})">${inputValues[i]}</button>
+    </div>
+  `).join('');
+
+  const isSeq = def.type === 'sequential';
+  const clk = isSeq ? `
+    <div class="separator"></div>
+    <div class="input-group">
+      <div class="input-label">Clock</div>
+      <button class="bit-btn" onclick="clockTick()" style="width:100px;font-size:12px;font-family:var(--mono);color:var(--amber);border-color:rgba(245,166,35,0.4);background:rgba(245,166,35,0.08)">CLK ↑</button>
+    </div>` : '';
+
+  return `
+    <div class="input-section">
+      <div class="input-grid">${bits}${clk}</div>
+    </div>`;
+}
+
+// ─── Output Section ───────────────────────────────────────────────────────────
+function buildOutputSection(def) {
+  const chips = def.outputs.map(pin => {
+    const val = outputValues[pin.replace("'","N")] !== undefined ? outputValues[pin.replace("'","N")] : outputValues[pin];
+    const isX = val === 'X';
+    const cls = isX ? '' : val === 1 ? 'v1' : 'v0';
+    return `
+      <div class="output-chip">
+        <span class="pin-name">${pin}</span>
+        <span class="pin-val ${cls}">${isX ? '?' : val}</span>
+      </div>`;
+  }).join('');
+
+  const stateInfo = (def.type === 'sequential' || def.type === 'counter')
+    ? `<span class="state-badge">STATE: ${def.type==='counter'?compState.toString(2).padStart(def.counterBits||2,'0'):compState}</span>` : '';
+
+  return `<div class="output-row">${chips}${stateInfo}</div>`;
+}
+
+// ─── Truth Table ──────────────────────────────────────────────────────────────
+function buildTruthTable(def) {
+  const inputMatch = (row) => {
+    if (def.type === 'counter') return row.inputs[0] === compState;
+    return row.inputs.every((v, i) => v === inputValues[i]);
+  };
+
+  const headers = [
+    ...def.inputs.map(n => `<th>${n}</th>`),
+    ...def.outputs.map(n => `<th>${n}</th>`),
+    def.truthTable[0].note !== undefined ? '<th>Note</th>' : ''
+  ].join('');
+
+  const rows = def.truthTable.map(row => {
+    const active = inputMatch(row);
+    const inputCells = row.inputs.map(v => `<td class="${v===0?'cell-0':'cell-1'}">${v}</td>`).join('');
+    const outCells = row.outputs.map(v => {
+      const cls = v===1?'cell-1':v===0?'cell-0':'';
+      return `<td class="${cls}">${v}</td>`;
+    }).join('');
+    const noteCell = row.note ? `<td style="color:var(--text3);font-size:11px">${row.note}</td>` : '';
+    return `<tr class="${active?'active-row':''}">${inputCells}${outCells}${noteCell}</tr>`;
+  }).join('');
+
+  return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ─── Waveform ─────────────────────────────────────────────────────────────────
+function buildWaveform(def) {
+  const W = 700, rowH = 36, pad = 14, labelW = 46;
+  const N = 16;
+  const step = (W - labelW - pad*2) / N;
+
+  // Compute output wave from input patterns
+  const inputWaves = def.type === 'counter'
+    ? [Array.from({length:N}, (_,i)=>i%2)]
+    : (def.waveInputs.length ? def.waveInputs : def.inputs.map(() => Array.from({length:N},(_,i)=>i%2)));
+
+  let state = def.initState || 0;
+  const outputWaves = {};
+  def.outputs.forEach(o => outputWaves[o] = []);
+
+  for (let i = 0; i < N; i++) {
+    const ins = def.type === 'counter' ? [] : def.inputs.map((_,j) => inputWaves[j]?.[i] || 0);
+    const res = def.compute(ins, state);
+    if (res.state !== undefined) state = res.state;
+    def.outputs.forEach(o => {
+      const key = o.replace("'","N");
+      const val = res[key] !== undefined ? res[key] : res[o];
+      outputWaves[o].push(val === 'X' ? 0 : (val || 0));
+    });
+  }
+
+  const allSignals = [
+    ...(def.type === 'counter' ? [['CLK', inputWaves[0]]] : def.inputs.map((n,i) => [n, inputWaves[i]||[]])),
+    ...def.outputs.map(o => [o, outputWaves[o]])
+  ];
+
+  const totalH = allSignals.length * (rowH + 8) + pad*2 + 24;
+  const x0 = labelW + pad;
+
+  const makeWavePath = (data, y, isOutput) => {
+    if (!data || data.length === 0) return '';
+    const high = y + 4;
+    const low = y + rowH - 4;
+    let d = '';
+    for (let i = 0; i < data.length; i++) {
+      const xc = x0 + i * step;
+      const xn = xc + step;
+      const cur = data[i] ? high : low;
+      const nxt = i < data.length-1 ? (data[i+1] ? high : low) : cur;
+      if (i === 0) d += `M${xc},${cur}`;
+      d += ` L${xn},${cur}`;
+      if (nxt !== cur) d += ` L${xn},${nxt}`;
+    }
+    return d;
+  };
+
+  const color = (isOutput, name) => {
+    if (name === 'CLK') return '#f5a623';
+    if (isOutput) return '#4f8ef7';
+    return '#2ecc8a';
+  };
+
+  const rows = allSignals.map(([name, data], idx) => {
+    const isOutput = idx >= (def.type==='counter'?1:def.inputs.length);
+    const y = pad + 20 + idx * (rowH + 8);
+    const col = color(isOutput, name);
+    const d = makeWavePath(data, y, isOutput);
+    const fill = isOutput ? 'rgba(79,142,247,0.06)' : 'rgba(46,204,138,0.06)';
+
+    // fill area below high parts
+    let fillD = '';
+    if (data && data.length > 0) {
+      const high = y + 4, low = y + rowH - 4;
+      let prev = null;
+      for (let i = 0; i < data.length; i++) {
+        const xc = x0 + i*step, xn = xc+step;
+        if (data[i]) {
+          if (prev !== i-1) fillD += `M${xc},${high}`;
+          fillD += ` L${xn},${high}`;
+        } else if (prev !== null && data[prev]) {
+          fillD += ` L${x0+prev*step+step},${low} L${x0+prev*step},${low} Z`;
+        }
+        if (data[i]) prev = i; else prev = null;
+      }
+      if (prev !== null && data[prev]) {
+        fillD += ` L${x0+data.length*step},${low} L${x0+prev*step},${low} Z`;
+      }
+    }
+
+    return `
+      <path d="${fillD}" fill="${fill}" stroke="none"/>
+      <path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="square"/>
+      <text x="${labelW+pad-6}" y="${y+rowH/2+4}" text-anchor="end" font-family="'Space Mono',monospace" font-size="10" fill="${isOutput?'#4f8ef7':name==='CLK'?'#f5a623':'#2ecc8a'}">${name}</text>
+    `;
+  }).join('');
+
+  // Grid lines
+  let grid = '';
+  for (let i = 0; i <= N; i++) {
+    const xg = x0 + i * step;
+    grid += `<line x1="${xg}" y1="${pad+16}" x2="${xg}" y2="${totalH-pad}" stroke="rgba(100,120,180,0.08)" stroke-width="0.5"/>`;
+  }
+  // Tick labels
+  let ticks = '';
+  for (let i = 0; i <= N; i+=2) {
+    const xg = x0 + i * step;
+    ticks += `<text x="${xg}" y="${pad+13}" text-anchor="middle" font-family="'Space Mono',monospace" font-size="9" fill="#3a4060">${i}</text>`;
+  }
+
+  return `<svg id="waveform-svg" viewBox="0 0 ${W} ${totalH}" style="background:transparent">
+    ${grid}${ticks}${rows}
+  </svg>`;
+}
+
+// ─── Circuit Diagrams ─────────────────────────────────────────────────────────
+function buildCircuit(def) {
+  const circuits = {
+    sr_latch: () => buildSRCircuit(),
+    d_ff: () => buildDFFCircuit(),
+    jk_ff: () => buildJKCircuit(),
+    t_ff: () => buildTFFCircuit(),
+    counter_2bit: () => buildCounterCircuit(2),
+    counter_3bit: () => buildCounterCircuit(3),
+    and_gate: () => buildGateCircuit('AND'),
+    or_gate: () => buildGateCircuit('OR'),
+    xor_gate: () => buildGateCircuit('XOR'),
+    nand_gate: () => buildGateCircuit('NAND'),
+    nor_gate: () => buildGateCircuit('NOR'),
+    half_adder: () => buildHalfAdderCircuit(),
+    full_adder: () => buildFullAdderCircuit(),
+    mux_2to1: () => buildMuxCircuit(),
+  };
+  return (circuits[currentComp] || (() => '<p style="color:var(--text3);padding:20px">Diagram loading…</p>'))();
+}
+
+const S = inputValues;
+const OV = () => outputValues;
+
+function wireColor(val) {
+  if (val === 1) return '#2ecc8a';
+  if (val === 0) return '#f05e5e';
+  return '#4a5170';
+}
+function W(val) { return `stroke="${wireColor(val)}" stroke-width="2"`; }
+function boxStyle(label) {
+  return `fill="#1e2330" stroke="#3a4570" stroke-width="1.5" rx="6"`;
+}
+function txt(x,y,content,opts='') {
+  return `<text x="${x}" y="${y}" font-family="'Space Mono',monospace" font-size="11" fill="#8a93a8" text-anchor="middle" dominant-baseline="central" ${opts}>${content}</text>`;
+}
+function pinLabel(x,y,content,anchor='start') {
+  return `<text x="${x}" y="${y}" font-family="'Space Mono',monospace" font-size="10" fill="#4a5170" text-anchor="${anchor}" dominant-baseline="central">${content}</text>`;
+}
+
+function buildSRCircuit() {
+  const [S,R] = inputValues;
+  const Q = outputValues.Q, QN = outputValues.QN;
+  return `<svg viewBox="0 0 480 200" width="100%" style="background:transparent">
+    ${pinLabel(14,60,'S')} <line x1="30" y1="60" x2="80" y2="60" ${W(S)}/>
+    ${pinLabel(14,140,'R')} <line x1="30" y1="140" x2="80" y2="140" ${W(R)}/>
+
+    <!-- NOR gate 1 -->
+    <rect x="80" y="40" width="80" height="40" ${boxStyle()}/>
+    ${txt(120,60,'NOR')}
+    <!-- NOR gate 2 -->
+    <rect x="80" y="120" width="80" height="40" ${boxStyle()}/>
+    ${txt(120,140,'NOR')}
+
+    <!-- Cross feedback wires -->
+    <line x1="160" y1="60" x2="200" y2="60" ${W(Q)}/>
+    <line x1="200" y1="60" x2="200" y2="170" stroke="${wireColor(Q)}" stroke-width="2"/>
+    <line x1="200" y1="170" x2="80" y2="170" stroke="${wireColor(Q)}" stroke-width="2"/>
+    <line x1="80" y1="170" x2="80" y2="160" stroke="${wireColor(Q)}" stroke-width="2"/>
+
+    <line x1="160" y1="140" x2="220" y2="140" ${W(QN)}/>
+    <line x1="220" y1="140" x2="220" y2="30" stroke="${wireColor(QN)}" stroke-width="2"/>
+    <line x1="220" y1="30" x2="80" y2="30" stroke="${wireColor(QN)}" stroke-width="2"/>
+    <line x1="80" y1="30" x2="80" y2="40" stroke="${wireColor(QN)}" stroke-width="2"/>
+
+    <!-- Outputs -->
+    <line x1="200" y1="60" x2="290" y2="60" ${W(Q)}/>
+    <line x1="220" y1="140" x2="290" y2="140" ${W(QN)}/>
+    ${pinLabel(294,60,"Q")} ${pinLabel(294,140,"Q'")}
+
+    <!-- Output nodes -->
+    <circle cx="200" cy="60" r="4" fill="${wireColor(Q)}"/>
+    <circle cx="220" cy="140" r="4" fill="${wireColor(QN)}"/>
+  </svg>`;
+}
+
+function buildDFFCircuit() {
+  const D = inputValues[0];
+  const Q = outputValues.Q; const QN = outputValues.QN;
+  return `<svg viewBox="0 0 420 160" width="100%" style="background:transparent">
+    ${pinLabel(14,60,'D')} <line x1="30" y1="60" x2="100" y2="60" ${W(D)}/>
+    ${pinLabel(14,110,'CLK')} <line x1="30" y1="110" x2="100" y2="110" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
+    <rect x="100" y="30" width="120" height="100" ${boxStyle()}/>
+    ${txt(160,65,'D')} ${txt(160,85,'FF')}
+    <!-- CLK triangle -->
+    <polygon points="100,103 114,110 100,117" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+    <line x1="220" y1="60" x2="310" y2="60" ${W(Q)}/>
+    <line x1="220" y1="110" x2="310" y2="110" ${W(QN)}/>
+    ${pinLabel(314,60,'Q')} ${pinLabel(314,110,"Q'")}
+    ${txt(225,60,'','')} 
+    <!-- D label inside box -->
+    ${txt(115,60,'D','fill="#4a5170"')}
+  </svg>`;
+}
+
+function buildJKCircuit() {
+  const [J,K] = inputValues;
+  const Q = outputValues.Q; const QN = outputValues.QN;
+  return `<svg viewBox="0 0 420 180" width="100%" style="background:transparent">
+    ${pinLabel(14,55,'J')} <line x1="30" y1="55" x2="100" y2="55" ${W(J)}/>
+    ${pinLabel(14,90,'CLK')} <line x1="30" y1="90" x2="100" y2="90" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
+    ${pinLabel(14,125,'K')} <line x1="30" y1="125" x2="100" y2="125" ${W(K)}/>
+    <rect x="100" y="30" width="120" height="120" ${boxStyle()}/>
+    ${txt(160,90,'JK-FF')}
+    <polygon points="100,83 114,90 100,97" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+    <line x1="220" y1="65" x2="320" y2="65" ${W(Q)}/>
+    <line x1="220" y1="115" x2="320" y2="115" ${W(QN)}/>
+    ${pinLabel(324,65,'Q')} ${pinLabel(324,115,"Q'")}
+    ${txt(113,55,'J','fill="#4a5170"')}
+    ${txt(113,125,'K','fill="#4a5170"')}
+  </svg>`;
+}
+
+function buildTFFCircuit() {
+  const T = inputValues[0];
+  const Q = outputValues.Q; const QN = outputValues.QN;
+  return `<svg viewBox="0 0 400 160" width="100%" style="background:transparent">
+    ${pinLabel(14,60,'T')} <line x1="30" y1="60" x2="100" y2="60" ${W(T)}/>
+    ${pinLabel(14,100,'CLK')} <line x1="30" y1="100" x2="100" y2="100" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>
+    <rect x="100" y="30" width="120" height="100" ${boxStyle()}/>
+    ${txt(160,80,'T-FF')}
+    <polygon points="100,93 114,100 100,107" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+    <line x1="220" y1="65" x2="310" y2="65" ${W(Q)}/>
+    <line x1="220" y1="95" x2="310" y2="95" ${W(QN)}/>
+    ${pinLabel(314,65,'Q')} ${pinLabel(314,95,"Q'")}
+    ${txt(113,60,'T','fill="#4a5170"')}
+  </svg>`;
+}
+
+function buildCounterCircuit(bits) {
+  const ffs = bits === 2 ? ['FF0','FF1'] : ['FF0','FF1','FF2'];
+  const vals = bits === 2
+    ? [outputValues.Q0||0, outputValues.Q1||0]
+    : [outputValues.Q0||0, outputValues.Q1||0, outputValues.Q2||0];
+  const W2 = 560;
+  const start = 30, gap = 160;
+  let svg = `<svg viewBox="0 0 ${W2} 160" width="100%" style="background:transparent">`;
+  svg += `${pinLabel(14,80,'CLK')} <line x1="30" y1="80" x2="${start+gap-10}" y2="80" stroke="${wireColor(1)}" stroke-width="2" stroke-dasharray="4,3"/>`;
+
+  ffs.forEach((ff,i) => {
+    const x = start + i*gap;
+    svg += `<rect x="${x}" y="40" width="110" height="80" ${boxStyle()}/>`;
+    svg += txt(x+55,80,'T-FF');
+    svg += `<polygon points="${x},73 ${x+14},80 ${x},87" fill="none" stroke="#f5a623" stroke-width="1.5"/>`;
+    svg += `<line x1="${x+110}" y1="65" x2="${x+gap}" y2="65" ${W(vals[i])}/>`;
+    svg += pinLabel(x+115,65,`Q${i}`);
+    if (i < ffs.length-1) {
+      svg += `<line x1="${x+160}" y1="65" x2="${x+160}" y2="110" ${W(vals[i])}/>`;
+      svg += `<line x1="${x+160}" y1="110" x2="${x+gap}" y2="110" ${W(vals[i])}/>`;
+      svg += `<line x1="${x+gap}" y1="110" x2="${x+gap}" y2="80" ${W(vals[i])}/>`;
+    }
+  });
+  svg += `</svg>`;
+  return svg;
+}
+
+function buildGateCircuit(type) {
+  const A = inputValues[0], B = inputValues[1];
+  const Y = outputValues.Y;
+  const bubbled = type === 'NAND' || type === 'NOR';
+  return `<svg viewBox="0 0 380 140" width="100%" style="background:transparent">
+    ${pinLabel(14,50,'A')} <line x1="30" y1="50" x2="110" y2="50" ${W(A)}/>
+    ${pinLabel(14,90,'B')} <line x1="30" y1="90" x2="110" y2="90" ${W(B)}/>
+    <rect x="110" y="30" width="100" height="80" ${boxStyle()}/>
+    ${txt(160,70,type)}
+    <line x1="210" y1="70" x2="${bubbled?230:280}" y2="70" ${W(Y)}/>
+    ${bubbled ? `<circle cx="236" cy="70" r="6" fill="#1e2330" stroke="${wireColor(Y)}" stroke-width="2"/>
+    <line x1="242" y1="70" x2="280" y2="70" ${W(Y)}/>` : ''}
+    ${pinLabel(284,70,'Y')}
+  </svg>`;
+}
+
+function buildHalfAdderCircuit() {
+  const A = inputValues[0], B = inputValues[1];
+  const Sum = outputValues.Sum, Cout = outputValues.Cout;
+  return `<svg viewBox="0 0 480 200" width="100%" style="background:transparent">
+    ${pinLabel(14,60,'A')} <line x1="30" y1="60" x2="100" y2="60" ${W(A)}/>
+    ${pinLabel(14,140,'B')} <line x1="30" y1="140" x2="100" y2="140" ${W(B)}/>
+
+    <!-- XOR -->
+    <rect x="100" y="40" width="90" height="40" ${boxStyle()}/>
+    ${txt(145,60,'XOR')}
+    <!-- AND -->
+    <rect x="100" y="120" width="90" height="40" ${boxStyle()}/>
+    ${txt(145,140,'AND')}
+
+    <line x1="60" y1="60" x2="60" y2="120" ${W(A)}/>
+    <line x1="60" y1="120" x2="100" y2="120" ${W(A)}/>
+    <circle cx="60" cy="60" r="4" fill="${wireColor(A)}"/>
+
+    <line x1="70" y1="140" x2="70" y2="50" ${W(B)}/>
+    <line x1="70" y1="50" x2="100" y2="50" ${W(B)}/>
+    <circle cx="70" cy="140" r="4" fill="${wireColor(B)}"/>
+    <line x1="70" y1="140" x2="100" y2="130" ${W(B)}/>
+
+    <line x1="190" y1="60" x2="300" y2="60" ${W(Sum)}/>
+    <line x1="190" y1="140" x2="300" y2="140" ${W(Cout)}/>
+    ${pinLabel(304,60,'Sum')} ${pinLabel(304,140,'Cout')}
+  </svg>`;
+}
+
+function buildFullAdderCircuit() {
+  const [A,B,Cin] = inputValues;
+  const Sum = outputValues.Sum, Cout = outputValues.Cout;
+  return `<svg viewBox="0 0 520 220" width="100%" style="background:transparent">
+    ${pinLabel(8,50,'A')} <line x1="24" y1="50" x2="90" y2="50" ${W(A)}/>
+    ${pinLabel(8,110,'B')} <line x1="24" y1="110" x2="90" y2="110" ${W(B)}/>
+    ${pinLabel(8,170,'Cin')} <line x1="24" y1="170" x2="90" y2="170" ${W(Cin)}/>
+
+    <!-- XOR1 -->
+    <rect x="90" y="30" width="80" height="40" ${boxStyle()}/>
+    ${txt(130,50,'XOR')}
+    <!-- AND1 -->
+    <rect x="90" y="130" width="80" height="40" ${boxStyle()}/>
+    ${txt(130,150,'AND')}
+
+    <!-- Wire A,B to XOR1 & AND1 -->
+    <line x1="50" y1="50" x2="50" y2="130" ${W(A)}/><line x1="50" y1="130" x2="90" y2="140" ${W(A)}/><circle cx="50" cy="50" r="3" fill="${wireColor(A)}"/>
+    <line x1="60" y1="110" x2="60" y2="145" ${W(B)}/><line x1="60" y1="145" x2="90" y2="150" ${W(B)}/><circle cx="60" cy="110" r="3" fill="${wireColor(B)}"/>
+
+    <!-- XOR1 out -->
+    <line x1="170" y1="50" x2="220" y2="50" ${W(A^B)}/>
+    <!-- XOR2 -->
+    <rect x="220" y="30" width="80" height="40" ${boxStyle()}/>
+    ${txt(260,50,'XOR')}
+    <line x1="90" y1="170" x2="210" y2="170" ${W(Cin)}/>
+    <line x1="210" y1="170" x2="210" y2="60" ${W(Cin)}/><line x1="210" y1="60" x2="220" y2="60" ${W(Cin)}/>
+
+    <!-- AND2 -->
+    <rect x="220" y="140" width="80" height="40" ${boxStyle()}/>
+    ${txt(260,160,'AND')}
+    <line x1="195" y1="50" x2="195" y2="155" ${W(A^B)}/><line x1="195" y1="155" x2="220" y2="155" ${W(A^B)}/><circle cx="195" cy="50" r="3" fill="${wireColor(A^B)}"/>
+    <line x1="200" y1="170" x2="200" y2="165" ${W(Cin)}/><line x1="200" y1="165" x2="220" y2="165" ${W(Cin)}/><circle cx="200" cy="170" r="3" fill="${wireColor(Cin)}"/>
+
+    <!-- OR -->
+    <rect x="340" y="120" width="80" height="40" ${boxStyle()}/>
+    ${txt(380,140,'OR')}
+    <line x1="170" y1="150" x2="330" y2="150" ${W((A&B))}/>
+    <line x1="330" y1="150" x2="340" y2="130" ${W((A&B))}/>
+    <line x1="300" y1="160" x2="340" y2="150" ${W((A&B)^(Cin&(A^B)))}/>
+
+    <line x1="300" y1="50" x2="440" y2="50" ${W(Sum)}/>
+    <line x1="420" y1="140" x2="440" y2="140" ${W(Cout)}/>
+    ${pinLabel(444,50,'Sum')} ${pinLabel(444,140,'Cout')}
+  </svg>`;
+}
+
+function buildMuxCircuit() {
+  const [D0,D1,Sel] = inputValues;
+  const Y = outputValues.Y;
+  return `<svg viewBox="0 0 440 200" width="100%" style="background:transparent">
+    ${pinLabel(14,50,'D0')} <line x1="36" y1="50" x2="120" y2="50" ${W(D0)}/>
+    ${pinLabel(14,110,'D1')} <line x1="36" y1="110" x2="120" y2="110" ${W(D1)}/>
+    ${pinLabel(14,170,'Sel')} <line x1="36" y1="170" x2="200" y2="170" ${W(Sel)}/>
+    <line x1="200" y1="170" x2="200" y2="140" ${W(Sel)}/>
+
+    <polygon points="120,20 120,180 220,150 220,50" fill="#1e2330" stroke="#3a4570" stroke-width="1.5"/>
+    ${txt(170,100,'MUX')}
+    ${txt(130,50,'0','fill="#4a5170"')} ${txt(130,110,'1','fill="#4a5170"')}
+    <line x1="220" y1="100" x2="330" y2="100" ${W(Y)}/>
+    ${pinLabel(334,100,'Y')}
+  </svg>`;
+}
+
+// Start with SR latch selected
+selectComp('sr_latch');
+</script>
+</body>
+</html>
